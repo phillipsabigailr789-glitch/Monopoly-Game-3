@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const elements=new Map();const elem=id=>{if(!elements.has(id))elements.set(id,{id,value:'',textContent:'',innerHTML:'',href:'',style:{},classList:{add(){},remove(){}},listeners:{},addEventListener(e,f){this.listeners[e]=f},append(){}});return elements.get(id)};
+const handlers={};let emitted=[];
+const socket={connected:true,on:(e,fn)=>handlers[e]=fn,timeout:()=>socket,emit:(e,p,cb)=>{emitted.push(e);if(cb)cb(null,{ok:true})}};
+const ctx={io:()=>socket,document:{getElementById:elem,createElement:()=>({style:{},set innerHTML(v){},set className(v){}})},window:{addEventListener(){}},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},console,confirm:()=>true,alert:()=>{}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/app.js','utf8'),ctx);
+const spaces=Array.from({length:40},(_,i)=>({name:'Space '+i,price:0,group:-1,type:'free',owner:null}));
+const players=[{id:'host',name:'Host',money:1500,pos:0,alive:true,icon:'🎲',freeCard:1,connected:true},{id:'guest',name:'Guest',money:1500,pos:0,alive:true,icon:'🩺',freeCard:1,connected:true}];
+handlers.state({code:'ABC123',self:'host',host:'host',started:false,ended:false,players,spaces,turn:'host',phase:'lobby',dice:null,log:[],trade:null,pending:null});
+assert(elem('actions').innerHTML.includes('Start game'));
+assert(typeof elem('startGameButton').listeners.click==='function');
+elem('startGameButton').listeners.click();
+assert(emitted.includes('start'));
+handlers.state({code:'ABC123',self:'host',host:'host',started:true,ended:false,players,spaces,turn:'host',phase:'roll',dice:null,log:[],trade:null,pending:null});
+assert(elem('actions').innerHTML.includes('Roll dice'));
+console.log('PASS: waiting room renders, Start button sends start event, active game renders Roll dice');

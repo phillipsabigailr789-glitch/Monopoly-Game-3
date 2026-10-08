@@ -32,9 +32,9 @@ function drawBoard(){const el=$('board');el.innerHTML='<div class="center"><stro
 function drawPlayers(){$('players').innerHTML=state.players.map(p=>`<div class="person ${p.id===state.turn?'current':''}"><span>${p.icon}</span><span>${escapeHtml(p.name)}${p.id===state.self?' (you)':''}${!p.connected?' ◌':''}${!p.alive?' (out)':''}<br><small>🎟️ ${p.freeCard} · ${state.spaces.filter(s=>s.owner===p.id).length} deeds</small></span><span>${money(p.money)}</span></div>`).join('');}
 function action(label,fn,cls=''){return `<button class="${cls}" onclick="${fn}">${label}</button>`;}
 function drawActions(){const me=state.players.find(p=>p.id===state.self),current=state.players.find(p=>p.id===state.turn),mine=me?.id===state.turn;let a='';$('phaseTitle').textContent=state.ended?'Final results':state.started?'Current turn':'Waiting room';$('turnInfo').innerHTML=state.ended?'Game over':state.started?`<b>${escapeHtml(current?.name||'')}</b> · ${escapeHtml(state.phase)} ${state.dice?'· 🎲 '+state.dice.join(' + '):''}`:`<b>${state.players.length}/10 joined</b><p>Share code <strong>${state.code}</strong> with classmates.</p>`;
-if(!state.started&&state.self===state.host)a+=action('Start game','send("start")');
+if(!state.started&&state.self===state.host)a+='<button type="button" id="startGameButton">Start game</button>';
 if(state.started&&!state.ended&&mine){if(state.phase==='roll'){a+=action('🎲 Roll dice','send("roll")');if(me.jail){a+=action('🎟️ Use free card','send("detention",{useCard:true})','secondary');a+=action('Pay $50','send("detention",{useCard:false})','secondary');}}if(state.phase==='buy'){const s=state.spaces[me.pos];a+=`<p>Buy ${escapeHtml(s.name)} for ${money(s.price)}?</p>`+action('Purchase','send("buy",{buy:true})')+action('Pass','send("buy",{buy:false})','light');}if(state.phase==='end')a+=action('End turn →','send("endTurn")');if(state.phase==='quiz')a+='<p>Answer the question on your screen.</p>';if(state.phase==='review')a+=action('Continue','send("reviewDone")');}
-if(state.started&&!state.ended&&state.self===state.host)a+=action('🏆 End game / leaderboard','confirmFinish()','light');$('actions').innerHTML=a;}
+if(state.started&&!state.ended&&state.self===state.host)a+=action('🏆 End game / leaderboard','confirmFinish()','light');$('actions').innerHTML=a;const startButton=$('startGameButton');if(startButton)startButton.addEventListener('click',()=>{setStatus('Start button clicked. Contacting server…');send('start');});}
 function showModal(html){$('modal').innerHTML=html;$('overlay').classList.remove('hidden');}function closeModal(){$('overlay').classList.add('hidden');}
 function showQuestion(){const q=state.pending;showModal(`<h2>📘 Nursing question</h2><p>${escapeHtml(q.question)}</p>${q.options.map((o,i)=>`<button class="option" onclick="answer(${i})">${String.fromCharCode(65+i)}. ${escapeHtml(o)}</button>`).join('')}<p class="muted">Wrong answer = all properties return to the bank.</p>`);}
 function answer(choice){send('answer',{choice});closeModal();}
@@ -45,3 +45,8 @@ function tradeFields(){const me=state.self,to=$('partner').value;const mine=stat
 function submitTrade(){const checked=n=>[...document.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>Number(x.value));send('tradeOffer',{to:$('partner').value,give:checked('give'),take:checked('take'),giveCash:Number($('giveCash').value),takeCash:Number($('takeCash').value)});closeModal();}
 function confirmFinish(){if(confirm('End the game for everyone and show the leaderboard?'))send('finish');}
 function showLeaderboard(){closeModal();$('phaseTitle').textContent='🏆 Final leaderboard';$('actions').innerHTML='';$('turnInfo').innerHTML=state.leaderboard.map(p=>`<div class="leader"><b>${p.rank===1?'🥇':p.rank===2?'🥈':p.rank===3?'🥉':'#'+p.rank} ${escapeHtml(p.name)}</b><span>${money(p.netWorth)}</span></div>`).join('');}
+
+window.addEventListener('error',e=>setStatus('Browser script error: '+e.message));
+window.addEventListener('unhandledrejection',e=>setStatus('Game error: '+String(e.reason)));
+
+window.addEventListener('error',e=>{setStatus('Game script error: '+e.message);});
